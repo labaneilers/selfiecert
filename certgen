@@ -1,0 +1,132 @@
+#!/bin/bash
+
+red() {
+    echo ""
+    echo -e "\e[1m\e[31m$1\e[0m"
+}
+
+blue() {
+    echo ""
+    echo -e "\e[1m\e[36m$1\e[0m"
+}
+
+green() {
+    echo ""
+    echo -e "\e[32m$1\e[0m"
+}
+
+indent() {
+    sed  's/^/     /'
+}
+
+check-err() {
+    if [ ! "$?" = "0" ]; then
+        red "ERROR: Certgen failed"
+        exit 1
+    fi
+}
+
+main() {
+    local help='usage: certgen [--help]
+    
+Generates a root CA key and cert, along with a website key and cert,
+and adds the root CA certificate to the local Windows trust store'
+
+    if [[ "$@" == *"help"* ]]; then
+        echo "$help"
+        echo ""
+        exit 0
+    fi
+
+    local script_dir=$(dirname "$0")
+    local cert_dir="$script_dir/certs"
+    local ca_serial="$cert_dir/caSerial.srl"
+    local san="$script_dir/san.cnf"
+    local ca_private_key="$cert_dir/caKey.pem"
+    local ca_public_cert="$cert_dir/caCertificate.pem"
+    local cert_private_key="$cert_dir/key.pem"
+    local csr="$cert_dir/csr.csr"
+    local cert="$cert_dir/certificate.pem"
+    local bundle="$cert_dir/bundle.pem"
+
+    POSITIONAL=()
+    while [[ $# -gt 0 ]]
+    do
+    key="$1"
+
+    case $key in
+        -s|--san)
+        san="$2"
+        shift # past argument
+        shift # past value
+        ;;
+        -o|--outdir)
+        cert_dir="$2"
+        shift # past argument
+        shift # past value
+        ;;
+    esac
+    done
+    set -- "${POSITIONAL[@]}" # restore positional parameters
+
+    local certs_full_path=$(readlink -f "$cert_dir")
+
+    blue "Generating certs to $certs_full_path using san $san..."
+
+    mkdir -p $cert_dir
+
+    if [ ! -f "$ca_serial" ]; then
+        cp "$script_dir/_caSerial.srl" "$ca_serial"
+    fi
+
+    if [ -f "$ca_private_key" ]; then
+        blue "CA private key already exists: using $ca_private_key"
+    else 
+        blue "Generating root CA private key at $ca_private_key..."
+        openssl genrsa -out "$ca_private_key" 4096
+
+        check-err
+    fi
+
+    if [ -f "$ca_public_cert" ]; then
+        blue "CA root CA public cert already exists: using $ca_public_cert"
+    else 
+        blue "Generating root CA public cert..."
+        openssl req -x509 -new -nodes -key "$ca_private_key" -sha256 -days 1024 -out "$ca_public_cert" -subj "/C=US/ST=FakeState/L=FakeCity/O=FakeOrg/OU=FakeOrgUnit/CN=CertgenSelfSigner"
+
+        check-err
+    fi
+
+    if [ -f "$cert_private_key" ]; then
+        blue "Cert private key already exists: using $cert_private_key"
+    else 
+        blue "Create cert private key..."
+        openssl genrsa -out "$cert_private_key" 2048
+
+        check-err
+    fi
+
+    if [ -f "$cert" ]; then
+        blue "Public cert already exists: using $cert"
+    else 
+        blue "Create CSR (cert request)..."
+        OPENSSL_CONF="$san" openssl req -new -sha256 -batch -key "$cert_private_key" -out "$csr"
+        check-err
+
+        blue "Sign CSR to create a certificate..."
+        openssl x509 -req -in "$csr" -CA "$ca_public_cert" -CAkey "$ca_private_key" -CAserial "$ca_serial" -out "$cert" -days 500 -sha256 -extensions req_ext -extfile "$san"
+        check-err
+    fi
+    
+    blue "Adding CA cert to local trusted root CA store..."
+    powershell.exe -Command "$script_dir/trust-ca.ps1"
+    check-err
+
+    blue "Generating combined cert..."
+    cat "$cert" "$ca_public_cert" >> "$bundle"
+    
+    green "Certs generated successfully in $certs_full_path:"
+    find "$certs_full_path" -type f
+}
+
+main "$@"
