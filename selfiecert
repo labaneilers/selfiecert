@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export MSYS_NO_PATHCONV=1
+
 red() {
     echo ""
     echo -e "\e[1m\e[31m$1\e[0m"
@@ -27,7 +29,8 @@ check-err() {
 }
 
 main() {
-    local script_dir=$(readlink -f $(dirname "$0"))
+    local script_path=$(dirname "$0")
+    local script_dir=$(readlink -f "$script_path")
     local cert_dir="$HOME/.selfiecert"
 
     local help='usage: selfiecert [-c|--config=<config file path>] [-o|--outdir=<certs output dir>] [--help]
@@ -145,10 +148,13 @@ and adds the root CA certificate to the local Windows trust store.
     
     blue "Adding CA cert to local trusted root CA store..."
     local ps_path="$script_dir/selfiecert-trust-ca.ps1"
+
+    # Hack to support WSL
     if [ -f /bin/wslpath ]; then
         ps_path=$(wslpath -w "$ps_path")
     fi
-    powershell.exe -Command "$ps_path"
+
+    powershell.exe -Command "'$ps_path'"
     check-err
 
     blue "Generating combined cert..."
