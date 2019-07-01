@@ -1,5 +1,5 @@
 function Get-ExistingCert {
-    $existingCert = gci Cert:\LocalMachine\Root | ? { $_.Subject -match "CertgenSelfSigner"}
+    $existingCert = gci Cert:\LocalMachine\Root | ? { $_.Subject -match "SelfieCert"}
     if ($existingCert -and ($existingCert.Count -gt 0)) {
         $existingCert[0]
     }
@@ -18,7 +18,7 @@ If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
         } else {
             Write-Host -ForegroundColor "yellow" ""
             Write-Host -ForegroundColor "yellow" "----------------------------------------"
-            Write-Host -ForegroundColor "yellow" "An existing CertgenSelfSigner cert with was found in the Trusted Root Certification Authority store on this machine,"
+            Write-Host -ForegroundColor "yellow" "An existing SelfieCert cert with was found in the Trusted Root Certification Authority store on this machine,"
             Write-Host -ForegroundColor "yellow" "but it has a different signature: $($existingCert.Thumbprint)."
             Write-Host -ForegroundColor "yellow" "You can delete it by running the following command in powershell (as Administrator):"
             Write-Host -ForegroundColor "yellow" ""

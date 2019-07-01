@@ -21,13 +21,13 @@ indent() {
 
 check-err() {
     if [ ! "$?" = "0" ]; then
-        red "ERROR: Certgen failed"
+        red "ERROR: selfiecert failed"
         exit 1
     fi
 }
 
 main() {
-    local help='usage: certgen [--help]
+    local help='usage: selfiecert [--help]
     
 Generates a root CA key and cert, along with a website key and cert,
 and adds the root CA certificate to the local Windows trust store'
@@ -92,7 +92,7 @@ and adds the root CA certificate to the local Windows trust store'
         blue "CA root CA public cert already exists: using $ca_public_cert"
     else 
         blue "Generating root CA public cert..."
-        openssl req -x509 -new -nodes -key "$ca_private_key" -sha256 -days 1024 -out "$ca_public_cert" -subj "/C=US/ST=FakeState/L=FakeCity/O=FakeOrg/OU=FakeOrgUnit/CN=CertgenSelfSigner"
+        openssl req -x509 -new -nodes -key "$ca_private_key" -sha256 -days 1024 -out "$ca_public_cert" -subj "/C=US/ST=FakeState/L=FakeCity/O=FakeOrg/OU=FakeOrgUnit/CN=SelfieCertCA"
 
         check-err
     fi
