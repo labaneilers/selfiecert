@@ -55,33 +55,47 @@ and adds the root CA certificate to the local Windows trust store.
     local cert="$cert_dir/certificate.pem"
     local bundle="$cert_dir/bundle.pem"
 
-    POSITIONAL=()
-    while [[ $# -gt 0 ]]
-    do
-    key="$1"
-
-    case $key in
-        -e|--config)
+    PARAMS=""
+    while (( "$#" )); do
+    case "$1" in
+        -c|--config)
         config="$2"
-        shift # past argument
-        shift # past value
+        shift 2
         ;;
         -o|--outdir)
         cert_dir="$2"
-        shift # past argument
-        shift # past value
+        shift 2
+        ;;
+        --) # end argument parsing
+        shift
+        break
+        ;;
+        -*|--*=) # unsupported flags
+        red "ERROR: Unsupported flag $1" >&2
+        exit 1
+        ;;
+        *) # preserve positional arguments
+        PARAMS="$PARAMS $1"
+        shift
         ;;
     esac
     done
-    set -- "${POSITIONAL[@]}" # restore positional parameters
+    # set positional arguments in their proper place
+    eval set -- "$PARAMS"
 
     local certs_full_path=$(readlink -f "$cert_dir")
 
     mkdir -p $cert_dir
+
     if [ "$config" = "" ]; then
         config="$cert_dir/config.cnf"
 
         cp "$script_dir/selfiecert-config.cnf" "$config"
+    else
+        if [ ! -f "$config" ]; then
+            red "ERROR: Config file not found: $config" >&2
+            exit 1
+        fi
     fi
 
     blue "Generating certs to $certs_full_path using config $config..."
