@@ -27,21 +27,27 @@ check-err() {
 }
 
 main() {
-    local help='usage: selfiecert [--help]
+    local script_dir=$(readlink -f $(dirname "$0"))
+    local cert_dir="~/.selfiecert"
+
+    local help='usage: selfiecert [-c|--config=<config file path>] [-o|--outdir=<certs output dir>] [--help]
     
 Generates a root CA key and cert, along with a website key and cert,
-and adds the root CA certificate to the local Windows trust store'
+and adds the root CA certificate to the local Windows trust store.
+
+-c|--config: Specify a config file to use instead of the default. 
+               An example is here: '$script_dir'/config.cnf
+-o|--output: The directory to output the certificate and key files. 
+               The default is '$cert_dir''
 
     if [[ "$@" == *"help"* ]]; then
         echo "$help"
         echo ""
         exit 0
     fi
-
-    local script_dir=$(dirname "$0")
-    local cert_dir="$script_dir/certs"
+    
     local ca_serial="$cert_dir/caSerial.srl"
-    local san="$script_dir/san.cnf"
+    local config="$script_dir/config.cnf"
     local ca_private_key="$cert_dir/caKey.pem"
     local ca_public_cert="$cert_dir/caCertificate.pem"
     local cert_private_key="$cert_dir/key.pem"
@@ -55,8 +61,8 @@ and adds the root CA certificate to the local Windows trust store'
     key="$1"
 
     case $key in
-        -s|--san)
-        san="$2"
+        -e|--config)
+        config="$2"
         shift # past argument
         shift # past value
         ;;
@@ -71,7 +77,7 @@ and adds the root CA certificate to the local Windows trust store'
 
     local certs_full_path=$(readlink -f "$cert_dir")
 
-    blue "Generating certs to $certs_full_path using san $san..."
+    blue "Generating certs to $certs_full_path using config $config..."
 
     mkdir -p $cert_dir
 
@@ -110,11 +116,11 @@ and adds the root CA certificate to the local Windows trust store'
         blue "Public cert already exists: using $cert"
     else 
         blue "Create CSR (cert request)..."
-        OPENSSL_CONF="$san" openssl req -new -sha256 -batch -key "$cert_private_key" -out "$csr"
+        OPENSSL_CONF="$config" openssl req -new -sha256 -batch -key "$cert_private_key" -out "$csr"
         check-err
 
         blue "Sign CSR to create a certificate..."
-        openssl x509 -req -in "$csr" -CA "$ca_public_cert" -CAkey "$ca_private_key" -CAserial "$ca_serial" -out "$cert" -days 500 -sha256 -extensions req_ext -extfile "$san"
+        openssl x509 -req -in "$csr" -CA "$ca_public_cert" -CAkey "$ca_private_key" -CAserial "$ca_serial" -out "$cert" -days 500 -sha256 -extensions req_ext -config "$config"
         check-err
     fi
     
