@@ -12,5 +12,7 @@ if (!( test-path $target_dir)) {
 
 iwr -uri "$source/selfiecert.cmd" -outfile "$target_dir\selfiecert.cmd"
 iwr -uri "$source/selfiecert" -outfile "$target_dir\selfiecert.sh"
+iwr -uri "$source/selfiecert-trust-ca.ps1" -outfile "$target_dir\selfiecert-trust-ca.ps1"
+iwr -uri "$source/selfiecert-config.cnf" -outfile "$target_dir\selfiecert-config.cnf"
 
 "Installed selfiecert at $target_dir\selfiecert.cmd"

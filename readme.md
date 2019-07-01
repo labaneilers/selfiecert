@@ -31,7 +31,7 @@ Open PowerShell as administrator, and run:
 selfiecert [-c|--config=<config file path>] [-o|--outdir=<certs output dir>] [--help]
 ```
 
-* **-c|--config**: Specify a config file to use instead of the default. An example is [here](./config.cnf).
+* **-c|--config**: Specify a config file to use instead of the default. An example is [here](./selfiecert-config.cnf).
 * **-o|--output**: The directory to output the certificate and key files. The default is ```~/.selfiecert```
 * **--help**: Print help
 

@@ -28,7 +28,7 @@ check-err() {
 
 main() {
     local script_dir=$(readlink -f $(dirname "$0"))
-    local cert_dir="~/.selfiecert"
+    local cert_dir="$HOME/.selfiecert"
 
     local help='usage: selfiecert [-c|--config=<config file path>] [-o|--outdir=<certs output dir>] [--help]
     
@@ -47,7 +47,7 @@ and adds the root CA certificate to the local Windows trust store.
     fi
     
     local ca_serial="$cert_dir/caSerial.srl"
-    local config="$script_dir/config.cnf"
+    local config=""
     local ca_private_key="$cert_dir/caKey.pem"
     local ca_public_cert="$cert_dir/caCertificate.pem"
     local cert_private_key="$cert_dir/key.pem"
@@ -77,12 +77,17 @@ and adds the root CA certificate to the local Windows trust store.
 
     local certs_full_path=$(readlink -f "$cert_dir")
 
+    mkdir -p $cert_dir
+    if [ "$config" = "" ]; then
+        config="$cert_dir/config.cnf"
+
+        cp "$script_dir/selfiecert-config.cnf" "$config"
+    fi
+
     blue "Generating certs to $certs_full_path using config $config..."
 
-    mkdir -p $cert_dir
-
     if [ ! -f "$ca_serial" ]; then
-        cp "$script_dir/_caSerial.srl" "$ca_serial"
+        echo "0000000000000000" > "$ca_serial"
     fi
 
     if [ -f "$ca_private_key" ]; then
@@ -120,12 +125,16 @@ and adds the root CA certificate to the local Windows trust store.
         check-err
 
         blue "Sign CSR to create a certificate..."
-        openssl x509 -req -in "$csr" -CA "$ca_public_cert" -CAkey "$ca_private_key" -CAserial "$ca_serial" -out "$cert" -days 500 -sha256 -extensions req_ext -config "$config"
+        openssl x509 -req -in "$csr" -CA "$ca_public_cert" -CAkey "$ca_private_key" -CAserial "$ca_serial" -out "$cert" -days 500 -sha256 -extensions req_ext -extfile "$config"
         check-err
     fi
     
     blue "Adding CA cert to local trusted root CA store..."
-    powershell.exe -Command "$script_dir/trust-ca.ps1"
+    local ps_path="$script_dir/selfiecert-trust-ca.ps1"
+    if [ -f /bin/wslpath ]; then
+        ps_path=$(wslpath -w "$ps_path")
+    fi
+    powershell.exe -Command "$ps_path"
     check-err
 
     blue "Generating combined cert..."

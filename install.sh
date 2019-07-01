@@ -3,12 +3,19 @@
 cd $(dirname "$0")
 
 mkdir -p ~/bin
-curl -s -f -S -o ~/bin/selfiecert https://raw.githubusercontent.com/labaneilers/selfiecert/master/selfiecert
-ERROR="$?"
-if [ ! "$ERROR" = "0" ]; then
-    echo "Failed to download"
-    exit 1
-fi
+
+download() {
+    curl -s -f -S -o ~/bin/$1 https://raw.githubusercontent.com/labaneilers/selfiecert/master/$1
+    ERROR="$?"
+    if [ ! "$ERROR" = "0" ]; then
+        echo "Failed to download"
+        exit 1
+    fi
+}
+
+download "selfiecert"
+download "selfiecert-config.cnf"
+download "selfiecert-trust-ca.ps1"
 
 chmod +x ~/bin/selfiecert
 
