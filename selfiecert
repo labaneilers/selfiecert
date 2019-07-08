@@ -179,7 +179,6 @@ and adds the root CA certificate to the local Windows trust store.
             ca_cert_plat_path=$(wslpath -w "$ca_public_cert")
         fi
 
-        echo powershell.exe -Command "'$ps_path'" "$ca_cert_plat_path"
         powershell.exe -Command "$ps_path $ca_cert_plat_path"
         check-err
     fi

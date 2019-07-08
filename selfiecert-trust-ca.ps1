@@ -9,7 +9,6 @@ $certPathRaw = $args[0]
 if (! $certPathRaw) {
     $certPathRaw = "~\.selfiecert\caCertificate.pem"
 }
-$certPathRaw
 
 $existingCert = Get-ExistingCert
 $certPath = resolve-path($certPathRaw)
