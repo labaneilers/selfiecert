@@ -184,6 +184,9 @@ and adds the root CA certificate to the local Windows trust store.
         check-err
     fi
 
+    blue "Copying CA root certificate over to output directory..."
+    cp "$ca_public_cert" "$cert_dir/caCertificate.pem"
+
     blue "Generating combined cert..."
     cat "$cert" "$ca_public_cert" >> "$bundle"
     
