@@ -37,6 +37,7 @@ main() {
     local script_path=$(dirname "$0")
     local script_dir=$(readlink -f "$script_path")
     local cert_dir="$HOME/.selfiecert"
+    local ca_cert_dir="$HOME/.selfiecert/rootCA"
     local config=""
     local help='usage: selfiecert [-c|--config=<config file path>] [-o|--outdir=<certs output dir>] [--help]
     
@@ -96,9 +97,9 @@ and adds the root CA certificate to the local Windows trust store.
     # set positional arguments in their proper place
     eval set -- "$PARAMS"
 
-    local ca_serial="$cert_dir/caSerial.srl"
-    local ca_private_key="$cert_dir/caKey.pem"
-    local ca_public_cert="$cert_dir/caCertificate.pem"
+    local ca_serial="$ca_cert_dir/caSerial.srl"
+    local ca_private_key="$ca_cert_dir/caKey.pem"
+    local ca_public_cert="$ca_cert_dir/caCertificate.pem"
     local cert_private_key="$cert_dir/key.pem"
     local csr="$cert_dir/csr.csr"
     local cert="$cert_dir/certificate.pem"
@@ -107,6 +108,7 @@ and adds the root CA certificate to the local Windows trust store.
     local certs_full_path=$(readlink -f "$cert_dir")
 
     mkdir -p $cert_dir
+    mkdir -p $ca_cert_dir
 
     if [ "$config" = "" ]; then
         config="$cert_dir/config.cnf"
@@ -169,13 +171,16 @@ and adds the root CA certificate to the local Windows trust store.
     else
         blue "Adding CA cert to local trusted root CA store..."
         local ps_path="$script_dir/selfiecert-trust-ca.ps1"
+        local ca_cert_plat_path="$ca_public_cert"
 
         # Hack to support WSL
         if [ -f /bin/wslpath ]; then
             ps_path=$(wslpath -w "$ps_path")
+            ca_cert_plat_path=$(wslpath -w "$ca_public_cert")
         fi
 
-        powershell.exe -Command "'$ps_path'"      
+        echo powershell.exe -Command "'$ps_path'" "$ca_cert_plat_path"
+        powershell.exe -Command "$ps_path $ca_cert_plat_path"
         check-err
     fi
 

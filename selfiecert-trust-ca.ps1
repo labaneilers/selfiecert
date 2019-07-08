@@ -5,9 +5,17 @@ function Get-ExistingCert {
     }
 }
 
+$certPathRaw = $args[0]
+if (! $certPathRaw) {
+    $certPathRaw = "~\.selfiecert\caCertificate.pem"
+}
+$certPathRaw
+
 $existingCert = Get-ExistingCert
-$certPath = resolve-path("~\.selfiecert\caCertificate.pem")
+$certPath = resolve-path($certPathRaw)
 $newCert = Get-PfxCertificate -FilePath $certPath
+
+"Using CA cert: $certPath"
 
 If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
 {   
@@ -28,7 +36,7 @@ If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
         }
     }
 
-    $arguments = "& '" + $myinvocation.mycommand.definition + "'"
+    $arguments = "& '" + $myinvocation.mycommand.definition + "' '$certPath'"
     try {
         Start-Process powershell -WindowStyle hidden -Verb runAs -ArgumentList $arguments
     } catch {
@@ -47,3 +55,4 @@ If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
 # }
 
 Import-Certificate $certPath -CertStoreLocation Cert:\LocalMachine\Root
+
