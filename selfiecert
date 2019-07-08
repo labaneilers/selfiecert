@@ -12,6 +12,11 @@ blue() {
     echo -e "\e[1m\e[36m$1\e[0m"
 }
 
+yellow() {
+    echo ""
+    echo -e "\e[1m\e[33m$1\e[0m"
+}
+
 green() {
     echo ""
     echo -e "\e[32m$1\e[0m"
@@ -32,7 +37,7 @@ main() {
     local script_path=$(dirname "$0")
     local script_dir=$(readlink -f "$script_path")
     local cert_dir="$HOME/.selfiecert"
-
+    local config=""
     local help='usage: selfiecert [-c|--config=<config file path>] [-o|--outdir=<certs output dir>] [--help]
     
 Generates a root CA key and cert, along with a website key and cert,
@@ -48,15 +53,20 @@ and adds the root CA certificate to the local Windows trust store.
         echo ""
         exit 0
     fi
-    
-    local ca_serial="$cert_dir/caSerial.srl"
-    local config=""
-    local ca_private_key="$cert_dir/caKey.pem"
-    local ca_public_cert="$cert_dir/caCertificate.pem"
-    local cert_private_key="$cert_dir/key.pem"
-    local csr="$cert_dir/csr.csr"
-    local cert="$cert_dir/certificate.pem"
-    local bundle="$cert_dir/bundle.pem"
+
+    local unameOut="$(uname -s)"
+    case "${unameOut}" in
+        Linux*)     machine=Linux;;
+        Darwin*)    machine=Mac;;
+        CYGWIN*)    machine=Cygwin;;
+        MINGW*)     machine=MinGw;;
+        *)          machine="UNKNOWN:${unameOut}"
+    esac
+
+    # Hack to support WSL
+    if [ -f /bin/wslpath ]; then
+        machine="WSL"
+    fi
 
     PARAMS=""
     while (( "$#" )); do
@@ -85,6 +95,14 @@ and adds the root CA certificate to the local Windows trust store.
     done
     # set positional arguments in their proper place
     eval set -- "$PARAMS"
+
+    local ca_serial="$cert_dir/caSerial.srl"
+    local ca_private_key="$cert_dir/caKey.pem"
+    local ca_public_cert="$cert_dir/caCertificate.pem"
+    local cert_private_key="$cert_dir/key.pem"
+    local csr="$cert_dir/csr.csr"
+    local cert="$cert_dir/certificate.pem"
+    local bundle="$cert_dir/bundle.pem"
 
     local certs_full_path=$(readlink -f "$cert_dir")
 
@@ -146,16 +164,20 @@ and adds the root CA certificate to the local Windows trust store.
         check-err
     fi
     
-    blue "Adding CA cert to local trusted root CA store..."
-    local ps_path="$script_dir/selfiecert-trust-ca.ps1"
+    if [ "$machine" = "Linux" ] || [ "$machine" = "Mac" ]; then
+        yellow "Skipping adding CA to trust store: not supported yet (please contribute!)"
+    else
+        blue "Adding CA cert to local trusted root CA store..."
+        local ps_path="$script_dir/selfiecert-trust-ca.ps1"
 
-    # Hack to support WSL
-    if [ -f /bin/wslpath ]; then
-        ps_path=$(wslpath -w "$ps_path")
+        # Hack to support WSL
+        if [ -f /bin/wslpath ]; then
+            ps_path=$(wslpath -w "$ps_path")
+        fi
+
+        powershell.exe -Command "'$ps_path'"      
+        check-err
     fi
-
-    powershell.exe -Command "'$ps_path'"
-    check-err
 
     blue "Generating combined cert..."
     cat "$cert" "$ca_public_cert" >> "$bundle"
