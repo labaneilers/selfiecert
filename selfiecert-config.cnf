@@ -16,3 +16,5 @@ DNS.1   = *.loc
 DNS.2   = *.minishift.loc
 DNS.3   = localhost
 DNS.4   = *.localhost
+DNS.5   = host.docker.internal
+DNS.6   = *.docker.internal
